@@ -1,0 +1,365 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow | Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+    <div class="app-layout">
+        <aside class="sidebar">
+            <a href="{{ url_for('home') }}" class="brand">
+                <span class="brand-icon">✓</span>
+                <span>TaskFlow</span>
+            </a>
+
+            <p class="nav-label">WORKSPACE</p>
+            <nav class="navigation">
+                <a href="{{ url_for('home') }}" class="nav-item active">
+                    <span>▦</span> Dashboard
+                </a>
+                <a href="#tasks" class="nav-item">
+                    <span>☷</span> My Tasks
+                    <span class="nav-count">{{ remaining }}</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="profile-avatar">A</div>
+                <div class="profile-info">
+                    <strong>My Workspace</strong>
+                    <span>Personal account</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">YOUR WORKSPACE</p>
+                    <h1>Dashboard<span>.</span></h1>
+                    <p class="subtitle">A little progress each day adds up.</p>
+                </div>
+                <div class="today-badge">
+                    <span class="status-dot"></span>
+                    Stay productive
+                </div>
+            </header>
+
+            <section class="stats-grid">
+                <article class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon purple">☷</span>
+                        <span class="stat-label">All tasks</span>
+                    </div>
+                    <strong class="stat-number">{{ total }}</strong>
+                    <span class="stat-foot">Tasks in your workspace</span>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon green">✓</span>
+                        <span class="stat-label">Completed</span>
+                    </div>
+                    <strong class="stat-number">{{ completed }}</strong>
+                    <span class="stat-foot">Tasks you've finished</span>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-icon orange">◷</span>
+                        <span class="stat-label">Remaining</span>
+                    </div>
+                    <strong class="stat-number">{{ remaining }}</strong>
+                    <span class="stat-foot">Tasks left to complete</span>
+                </article>
+            </section>
+
+            <section class="progress-panel">
+                <div class="progress-heading">
+                    <div>
+                        <h2>Your progress</h2>
+                        <p>Every completed task is a step forward.</p>
+                    </div>
+                    <strong>
+                        {{ ((completed / total * 100) | round | int) if total else 0 }}%
+                    </strong>
+                </div>
+                <div class="progress-track">
+                <div class="progress-fill
+                    {% set progress = (completed / total * 100) if total else 0 %}
+                    {% if progress < 30 %}progress-low
+                    {% elif progress < 70 %}progress-medium
+                    {% else %}progress-high{% endif %}"
+                    style="width: {{ progress }}%">
+                </div>
+                </div>
+                <p class="progress-caption">{{ completed }} of {{ total }} tasks completed</p>
+            </section>
+
+            <section class="tasks-panel" id="tasks">
+                <div class="panel-heading">
+                    <div>
+                        <h2>My Tasks</h2>
+                        <p>Keep track of what matters.</p>
+                    </div>
+                    <span class="task-pill">{{ total }} total</span>
+                </div>
+<form class="task-filters" action="{{ url_for('home') }}" method="get">
+    <input
+        type="search"
+        name="q"
+        placeholder="Search tasks..."
+        value="{{ request.args.get('q', '') }}"
+        aria-label="Search tasks"
+    >
+
+    <select name="state" aria-label="Filter by status">
+        <option value="all"
+            {% if request.args.get('state', 'all') == 'all' %}selected{% endif %}>
+            All tasks
+        </option>
+        <option value="active"
+            {% if request.args.get('state') == 'active' %}selected{% endif %}>
+            In progress
+        </option>
+        <option value="completed"
+            {% if request.args.get('state') == 'completed' %}selected{% endif %}>
+            Completed
+        </option>
+    </select>
+
+    <select name="due" aria-label="Filter by due date">
+        <option value="all"
+            {% if request.args.get('due', 'all') == 'all' %}selected{% endif %}>
+            All due dates
+        </option>
+
+        <option value="overdue"
+            {% if request.args.get('due') == 'overdue' %}selected{% endif %}>
+            Overdue
+        </option>
+
+        <option value="today"
+        {% if request.args.get('due') == 'today' %}selected{% endif %}>
+        Due today
+        </option>
+
+        <option value="upcoming"
+            {% if request.args.get('due') == 'upcoming' %}selected{% endif %}>
+            Upcoming
+        </option>
+    </select>
+<select name="sort" aria-label="Sort tasks">
+    <option value="newest"
+        {% if request.args.get('sort', 'newest') == 'newest' %}selected{% endif %}>
+        Newest first
+    </option>
+    <option value="priority"
+        {% if request.args.get('sort') == 'priority' %}selected{% endif %}>
+        Highest priority
+    </option>
+    <option value="due_date"
+        {% if request.args.get('sort') == 'due_date' %}selected{% endif %}>
+        Due date
+    </option>
+</select>
+
+    <button type="submit">Search</button>
+</form>
+
+              
+<form class="add-form" action="{{ url_for('add_task') }}" method="post">
+    <input
+        type="text"
+        name="title"
+        placeholder="What needs to get done?"
+        maxlength="200"
+     
+        aria-label="Task title"
+    >
+
+    <textarea
+        name="description"
+        placeholder="Add a description (optional)"
+        rows="3"
+        aria-label="Task description"
+    ></textarea>
+
+    <label for="priority">Priority</label>
+    <select name="priority" id="priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+    </select>
+
+    <label for="due_date">Due date</label>
+    <input
+        type="date"
+        name="due_date"
+        id="due_date"
+        aria-label="Due date"
+    >
+
+    <button type="submit">+ Add task</button>
+</form>
+
+
+                {% if tasks %}
+                    <ul class="task-list">
+                        {% for task in tasks %}
+                            <li class="task-item {% if task.completed %}completed{% endif %}">
+                                <form action="{{ url_for('toggle_task', task_id=task.id) }}"
+                                      method="post">
+                                    <button class="toggle-button" type="submit"
+                                            aria-label="Toggle task completion">
+                                        {% if task.completed %}✓{% else %}{% endif %}
+                                    </button>
+                                </form>
+
+                               
+<div class="task-details">
+    <span class="task-title">{{ task.title }}</span>
+
+    {% if task.description %}
+        <span class="task-description">
+            {{ task.description }}
+        </span>
+    {% endif %}
+
+    <div class="task-meta">
+        <span class="priority priority-{{ task.priority }}">
+            {% if task.priority == 'high' %}
+                High priority
+            {% elif task.priority == 'low' %}
+                Low priority
+            {% else %}
+                Medium priority
+            {% endif %}
+        </span>
+
+{% if task.due_date %}
+    <span class="task-due-date">
+        Due: {{ task.due_date }}
+    </span>
+
+    {% if not task.completed %}
+        {% if task.due_date < today %}
+            <span class="overdue-badge">Overdue</span>
+        {% elif task.due_date == today %}
+            <span class="due-today-badge">Due Today</span>
+        {% else %}
+            <span class="upcoming-badge">Upcoming</span>
+        {% endif %}
+    {% endif %}
+{% endif %}
+    </div>
+
+    <span class="task-status">
+        {{ 'Completed' if task.completed else 'In progress' }}
+    </span>
+</div>
+
+
+                              
+<details class="edit-task">
+    <summary class="edit-button">Edit</summary>
+
+    <form action="{{ url_for('edit_task', task_id=task.id) }}"
+          method="post"
+          class="edit-form">
+
+        <label>Task title</label>
+        <input type="text"
+               name="title"
+               value="{{ task.title }}"
+               maxlength="200"
+               required>
+
+        <label>Description</label>
+        <textarea name="description"
+                  rows="3">{{ task.description }}</textarea>
+
+        <label>Priority</label>
+        <select name="priority">
+            <option value="low"
+                {% if task.priority == 'low' %}selected{% endif %}>
+                Low
+            </option>
+            <option value="medium"
+                {% if task.priority == 'medium' %}selected{% endif %}>
+                Medium
+            </option>
+            <option value="high"
+                {% if task.priority == 'high' %}selected{% endif %}>
+                High
+            </option>
+        </select>
+
+        <label>Due date</label>
+        <input type="date"
+               name="due_date"
+               value="{{ task.due_date or '' }}">
+
+        <button type="submit">Save changes</button>
+    </form>
+</details>
+
+<form action="{{ url_for('delete_task', task_id=task.id) }}"
+      method="post">
+    <button class="delete-button" type="submit"
+            aria-label="Delete {{ task.title }}">
+        Delete
+    </button>
+</form>
+
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon">✓</div>
+                        <h3>Your workspace is clear</h3>
+                        <p>Add your first task above and start making progress.</p>
+                    </div>
+                {% endif %}
+            </section>
+
+            <footer>
+                <span>TaskFlow · Built with Python &amp; Flask</span>
+                <span>Small steps. Big progress.</span>
+            </footer>
+        </main>
+    </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const messages = document.querySelectorAll(".flash-message");
+
+        messages.forEach(function (message) {
+            setTimeout(function () {
+                message.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+                message.style.opacity = "0";
+                message.style.transform = "translateY(-10px)";
+
+                setTimeout(function () {
+                    message.remove();
+                }, 500);
+            }, 4000);
+        });
+    });
+</script>
+</body>
+</html>
