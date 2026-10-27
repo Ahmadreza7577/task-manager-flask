@@ -18,7 +18,7 @@ if not app.secret_key:
 DATABASE = "tasks.db"
 
 def get_db_connection():
-    connection = sqlite3.connect(DATABASE)
+    connection = sqlite3.connect(app.config.get("DATABASE", DATABASE))
     connection.row_factory = sqlite3.Row
     return connection
 
