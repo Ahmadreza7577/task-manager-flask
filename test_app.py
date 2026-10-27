@@ -442,3 +442,228 @@ def test_filter_upcoming_tasks():
         assert response.status_code == 200
         assert b"Upcoming task" in response.data
         assert b"Overdue task" not in response.data
+
+def test_init_db_migrates_old_database():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/old_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        connection = sqlite3.connect(test_database)
+        connection.execute("""
+            CREATE TABLE tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                completed INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        connection.execute(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)",
+            ("Old task", 0),
+        )
+        connection.commit()
+        connection.close()
+
+        taskflow.init_db()
+        taskflow.init_db()
+
+        connection = sqlite3.connect(test_database)
+        columns = {
+            row[1]
+            for row in connection.execute(
+                "PRAGMA table_info(tasks)"
+            ).fetchall()
+        }
+        task = connection.execute(
+            "SELECT title, description, priority, due_date, status "
+            "FROM tasks WHERE title = ?",
+            ("Old task",),
+        ).fetchone()
+        connection.close()
+
+        assert {
+            "description",
+            "priority",
+            "due_date",
+            "status",
+        }.issubset(columns)
+
+        assert task == ("Old task", "", "medium", None, "todo")
+        
+def test_sort_tasks_by_due_date():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("Later task", "2099-12-31"),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("Earlier task", "2099-01-01"),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("No due date", None),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.get("/?sort=due_date")
+
+        assert response.status_code == 200
+
+        html = response.data.decode()
+        earlier_position = html.index("Earlier task")
+        later_position = html.index("Later task")
+        no_date_position = html.index("No due date")
+
+        assert earlier_position < later_position < no_date_position
+
+def test_filter_active_tasks():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)",
+            ("Active task", 0),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)",
+            ("Completed task", 1),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.get("/?state=active")
+
+        assert response.status_code == 200
+        assert b"Active task" in response.data
+        assert b"Completed task" not in response.data
+
+def test_delete_nonexistent_task():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        client = taskflow.app.test_client()
+        response = client.post("/delete/999")
+
+        assert response.status_code == 302
+        assert response.location == "/"
+
+        with client.session_transaction() as session:
+            flashes = session.get("_flashes", [])
+            assert any(
+                "Task not found." in message
+                for category, message in flashes
+            )
+
+def test_edit_task_without_title():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title) VALUES (?)",
+            ("Original task",),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.post(
+            "/edit/1",
+            data={"title": ""},
+        )
+
+        assert response.status_code == 302
+        assert response.location == "/"
+
+        with client.session_transaction() as session:
+            flashes = session.get("_flashes", [])
+            assert any(
+                "Please enter a task title." in message
+                for category, message in flashes
+            )
+
+        connection = sqlite3.connect(test_database)
+        task = connection.execute(
+            "SELECT title FROM tasks WHERE id = 1"
+        ).fetchone()
+        connection.close()
+
+        assert task == ("Original task",)
+
+def test_edit_task_with_invalid_priority():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title) VALUES (?)",
+            ("Original task",),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.post(
+            "/edit/1",
+            data={
+                "title": "Updated task",
+                "priority": "urgent",
+            },
+        )
+
+        assert response.status_code == 302
+
+        connection = sqlite3.connect(test_database)
+        task = connection.execute(
+            "SELECT title, priority FROM tasks WHERE id = 1"
+        ).fetchone()
+        connection.close()
+
+        assert task == ("Updated task", "medium")
+
