@@ -239,3 +239,107 @@ def test_edit_task():
             "high",
             "2026-11-20",
         )
+
+def test_search_tasks_by_description():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            """
+            INSERT INTO tasks (title, description)
+            VALUES (?, ?)
+            """,
+            ("Prepare portfolio", "Practice Python testing"),
+        )
+        connection.execute(
+            """
+            INSERT INTO tasks (title, description)
+            VALUES (?, ?)
+            """,
+            ("Buy groceries", "Get milk and bread"),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.get("/?q=Python")
+
+        assert response.status_code == 200
+        assert b"Prepare portfolio" in response.data
+        assert b"Buy groceries" not in response.data
+
+def test_filter_completed_tasks():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)",
+            ("Completed task", 1),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)",
+            ("Active task", 0),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.get("/?state=completed")
+
+        assert response.status_code == 200
+        assert b"Completed task" in response.data
+        assert b"Active task" not in response.data
+
+def test_sort_tasks_by_priority():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title, priority) VALUES (?, ?)",
+            ("Low priority task", "low"),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, priority) VALUES (?, ?)",
+            ("High priority task", "high"),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, priority) VALUES (?, ?)",
+            ("Medium priority task", "medium"),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.get("/?sort=priority")
+
+        assert response.status_code == 200
+
+        high_position = response.data.index(b"High priority task")
+        medium_position = response.data.index(b"Medium priority task")
+        low_position = response.data.index(b"Low priority task")
+
+        assert high_position < medium_position < low_position
