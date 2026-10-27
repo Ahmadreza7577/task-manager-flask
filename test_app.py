@@ -1,4 +1,4 @@
-
+from datetime import date, timedelta
 import sqlite3
 import tempfile
 
@@ -343,3 +343,102 @@ def test_sort_tasks_by_priority():
         low_position = response.data.index(b"Low priority task")
 
         assert high_position < medium_position < low_position
+
+def test_filter_overdue_tasks():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("Overdue task", yesterday),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("Upcoming task", tomorrow),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.get("/?due=overdue")
+
+        assert response.status_code == 200
+        assert b"Overdue task" in response.data
+        assert b"Upcoming task" not in response.data
+
+def test_filter_tasks_due_today():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        today = date.today().isoformat()
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("Due today task", today),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("Due tomorrow task", tomorrow),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.get("/?due=today")
+
+        assert response.status_code == 200
+        assert b"Due today task" in response.data
+        assert b"Due tomorrow task" not in response.data
+
+def test_filter_upcoming_tasks():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_database = f"{temp_dir}/test_tasks.db"
+
+        taskflow.app.config.update(
+            TESTING=True,
+            DATABASE=test_database,
+        )
+
+        setup_test_database(test_database)
+
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+
+        connection = sqlite3.connect(test_database)
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("Overdue task", yesterday),
+        )
+        connection.execute(
+            "INSERT INTO tasks (title, due_date) VALUES (?, ?)",
+            ("Upcoming task", tomorrow),
+        )
+        connection.commit()
+        connection.close()
+
+        client = taskflow.app.test_client()
+        response = client.get("/?due=upcoming")
+
+        assert response.status_code == 200
+        assert b"Upcoming task" in response.data
+        assert b"Overdue task" not in response.data
