@@ -1,11 +1,13 @@
-
+from dotenv import load_dotenv
 import sqlite3
 import os
 from datetime import date
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-app = Flask(__name__)
 
+load_dotenv()
+
+app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY")
 
 if not app.secret_key:
