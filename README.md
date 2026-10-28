@@ -38,6 +38,18 @@ TaskFlow is a task management web application built with Python, Flask, and SQLi
 - pip
 - Git (optional, for cloning the repository)
 
+## What I Learned
+
+Building TaskFlow helped me practice and strengthen the following skills:
+
+- **Backend development:** Building web routes and handling form submissions with Flask.
+- **Database management:** Storing and managing tasks with SQLite.
+- **CRUD operations:** Implementing task creation, editing, deletion, and completion.
+- **Frontend development:** Styling a responsive interface with HTML and CSS.
+- **Automated testing:** Writing tests with pytest and measuring code coverage with pytest-cov.
+- **Version control:** Tracking changes with Git and publishing the project on GitHub.
+- **Configuration and security:** Managing environment variables and keeping secret configuration out of version control.
+
 ## Installation
 
 ### 1. Clone the repository
