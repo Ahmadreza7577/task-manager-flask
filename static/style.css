@@ -374,6 +374,7 @@ h1 span {
 
 .add-form {
     display: flex;
+    flex-wrap: wrap;
     gap: 11px;
     margin-top: 25px;
 }
@@ -400,7 +401,7 @@ h1 span {
 }
 
 .add-form button {
-    padding: 13px 18px;
+    padding: 14px 22px;
     border: none;
     border-radius: 11px;
     background: var(--accent);
@@ -946,4 +947,41 @@ footer {
     border: 1px solid #86efac;
     font-size: 12px;
     font-weight: 700;
+}
+/* Consistent styling for task form controls */
+.add-form textarea,
+.add-form select,
+.add-form input[type="date"] {
+    min-width: 0;
+    max-width: 100%;
+    padding: 14px 15px;
+    border: 1px solid #e7e9f2;
+    border-radius: 11px;
+    background: #fcfcfe;
+    color: var(--text);
+    font: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.add-form textarea:focus,
+.add-form select:focus,
+.add-form input[type="date"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(101, 88, 232, 0.1);
+}
+
+.add-form textarea {
+    resize: vertical;
+    min-height: 48px;
+}
+
+.add-form select {
+    cursor: pointer;
+}
+
+.add-form label {
+    align-self: center;
+    margin-left: -4px;
+    white-space: nowrap;
 }
