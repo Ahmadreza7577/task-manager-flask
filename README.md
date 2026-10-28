@@ -2,6 +2,14 @@
 
 TaskFlow is a task management web application built with Python, Flask, and SQLite. It helps users organize tasks, set priorities and due dates, track progress, and quickly find tasks using search and filters.
 
+## Screenshots
+
+### TaskFlow Dashboard
+![TaskFlow Dashboard](screenshots/screenshot.png)
+
+### Test Coverage
+![Test Coverage](screenshots/coverage.png)
+
 ## Features
 
 - Create, edit, and delete tasks
