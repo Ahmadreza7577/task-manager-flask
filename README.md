@@ -5,7 +5,7 @@ TaskFlow is a task management web application built with Python, Flask, and SQLi
 ## Screenshots
 
 ### TaskFlow Dashboard
-![TaskFlow Dashboard](screenshots/screenshot.png)
+![TaskFlow Dashboard](screenshots/Screenshot.png)
 
 ### Test Coverage
 ![Test Coverage](screenshots/coverage.png)
